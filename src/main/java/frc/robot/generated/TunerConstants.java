@@ -78,14 +78,6 @@ public class TunerConstants {
     private static final double kDriveGearRatio = 6.122448979591837;
     private static final double kSteerGearRatio = 21.428571428571427;
     private static final double kWheelRadiusInches = 4;
-    public static final double kTrackWidth = Units.inchesToMeters(18.55);
-    public static final double kWheelBase = Units.inchesToMeters(18.55);
-
-        public static final SwerveDriveKinematics kDriveKinematics = new SwerveDriveKinematics(
-        new Translation2d(kWheelBase / 2, kTrackWidth / 2),
-        new Translation2d(kWheelBase / 2, -kTrackWidth / 2),
-        new Translation2d(-kWheelBase / 2, kTrackWidth / 2),
-        new Translation2d(-kWheelBase / 2, -kTrackWidth / 2));
 
     private static final boolean kInvertLeftSide = false;
     private static final boolean kInvertRightSide = true;
@@ -178,7 +170,7 @@ public class TunerConstants {
 
         /* Drivetrain Constants */
         public static final double trackWidth = Units.inchesToMeters(18.05); //TODO: This must be tuned to specific robot
-        public static final double wheelBase = Units.inchesToMeters(18.055); //TODO: This must be tuned to specific robot
+        public static final double wheelBase = Units.inchesToMeters(18.05); //TODO: This must be tuned to specific robot
         public static final double wheelCircumference = chosenModule.wheelCircumference;
         //Check on this later!!!!!!!!!
 
@@ -216,22 +208,6 @@ public class TunerConstants {
          * We found a small open loop ramp (0.25) helps with tread wear, tipping, etc */
         public static final double openLoopRamp = 0.25;
         public static final double closedLoopRamp = 0.0;
-
-        /* Angle Motor PID Values */
-        public static final double angleKP = chosenModule.angleKP;
-        public static final double angleKI = chosenModule.angleKI;
-        public static final double angleKD = chosenModule.angleKD;
-
-        /* Drive Motor PID Values */
-        public static final double driveKP = 0.12; //TODO: This must be tuned to specific robot
-        public static final double driveKI = 0.0;
-        public static final double driveKD = 0.0;
-        public static final double driveKF = 0.0;
-
-        /* Drive Motor Characterization Values From SYSID */
-        public static final double driveKS = 0.32; //TODO: This must be tuned to specific robot
-        public static final double driveKV = 1.51;
-        public static final double driveKA = 0.27;
 
         /* Swerve Profiling Values */
         /** Meters per Second */
@@ -286,8 +262,6 @@ public class TunerConstants {
                 new SwerveModConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
         }
     }
-
-
 
     private static final SwerveModuleConstants FrontLeft = ConstantCreator.createModuleConstants(
             kFrontLeftSteerMotorId, kFrontLeftDriveMotorId, kFrontLeftEncoderId, kFrontLeftEncoderOffset, Units.inchesToMeters(kFrontLeftXPosInches), Units.inchesToMeters(kFrontLeftYPosInches), kInvertLeftSide)

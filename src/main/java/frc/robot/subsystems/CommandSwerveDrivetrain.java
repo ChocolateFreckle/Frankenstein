@@ -32,6 +32,10 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.generated.TunerConstants;
+import frc.robot.generated.TunerConstants.Swerve.Mod0;
+import frc.robot.generated.TunerConstants.Swerve.Mod1;
+import frc.robot.generated.TunerConstants.Swerve.Mod2;
+import frc.robot.generated.TunerConstants.Swerve.Mod3;
 
 /**
  * Class that extends the Phoenix SwerveDrivetrain class and implements
@@ -44,27 +48,6 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
     private Notifier m_simNotifier = null;
     private double m_lastSimTime;
     public SwerveDriveOdometry odometry;
-
-    public final MAXSwerveModule m_frontLeft = new MAXSwerveModule(
-        TunerConstants.kFrontLeftDriveMotorId,
-        TunerConstants.kFrontLeftSteerMotorId,
-        TunerConstants.kFrontLeftEncoderOffset);
-  
-    public final MAXSwerveModule m_frontRight = new MAXSwerveModule(
-        TunerConstants.kFrontRightDriveMotorId,
-        TunerConstants.kFrontRightSteerMotorId,
-        TunerConstants.kFrontRightEncoderOffset);
-  
-    public final MAXSwerveModule m_backLeft = new MAXSwerveModule(
-        TunerConstants.kBackLeftDriveMotorId,
-        TunerConstants.kBackLeftSteerMotorId,
-        TunerConstants.kBackLeftEncoderOffset);
-  
-    public final MAXSwerveModule m_backRight = new MAXSwerveModule(
-        TunerConstants.kBackRightDriveMotorId,
-        TunerConstants.kBackRightSteerMotorId,
-        TunerConstants.kBackRightEncoderOffset);
-
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
     private final Rotation2d BlueAlliancePerspectiveRotation = Rotation2d.fromDegrees(0);
@@ -109,7 +92,7 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
         public DriveSubsystem() {
             AutoBuilder.configureHolonomic(
             this::getPose, // Robot pose supplier
-            this::resetPose, // Method to reset odometry (will be called if your auto has a starting pose)
+            this::resetOdometry, // Method to reset odometry (will be called if your auto has a starting pose)
             this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
             this::driveRobotRelative, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
             new HolonomicPathFollowerConfig( // HolonomicPathFollowerConfig, this should likely live in your Constants class
@@ -139,17 +122,42 @@ public Pose2d getPose() {
     return m_odometry.getEstimatedPosition();
   }
 
-public void resetPose(Pose2d pose) {
-    odometry.resetPosition( BlueAlliancePerspectiveRotation, m_modulePositions, pose);
-}
+public Pose2d getPose2d() {
+    return m_odometry.getEstimatedPosition();
+  }
 
-// public ChassisSpeeds getRobotRelativeSpeeds() {
-//     return odometry.getChassisSpeeds();
+
+// public void resetPose(Pose2d pose) {
+//     odometry.resetPosition( BlueAlliancePerspectiveRotation, m_modulePositions, pose);
 // }
 
-// public void driveRobotRelative(ChassisSpeeds speeds) {
-//     setControl(speeds);
-// }
+public void resetEncoders() {
+    m_drivingEncoder.setPosition(0);
+  }
+
+public void resetEncoders() {
+    Mod0.resetEncoders();
+    Mod1.resetEncoders();
+    Mod2.resetEncoders();
+    Mod3.resetEncoders();
+  }
+
+public void resetOdometry(Pose2d pose) {
+
+    resetEncoders();
+
+    m_odometry.resetPosition(
+      m_gyro.getRotation2d(),
+        new SwerveModulePosition[] {
+            Mod0.getPosition(),
+            Mod1.getPosition(),
+            Mod2.getPosition(),
+            Mod3.getPosition()
+        },
+        pose);
+  }
+
+
 
  public void driveRobotRelative(ChassisSpeeds chassisSpeeds) {
     var swerveModuleStates = 
@@ -158,18 +166,18 @@ public void resetPose(Pose2d pose) {
     SwerveDriveKinematics.desaturateWheelSpeeds(
         (SwerveModuleState[]) swerveModuleStates, TunerConstants.kSpeedAt12VoltsMps);
   
-    m_frontLeft.setDesiredState(swerveModuleStates[0]);
-    m_frontRight.setDesiredState(swerveModuleStates[1]);
-    m_backLeft.setDesiredState(swerveModuleStates[2]);
-    m_backRight.setDesiredState(swerveModuleStates[3]);
+    Mod0.setDesiredState(swerveModuleStates[0]);
+    Mod1.setDesiredState(swerveModuleStates[1]);
+    Mod2.setDesiredState(swerveModuleStates[2]);
+    Mod3.setDesiredState(swerveModuleStates[3]);
   }
   
   public ChassisSpeeds getRobotRelativeSpeeds() {
     return TunerConstants.kDriveKinematics.toChassisSpeeds(
-        m_frontLeft.getState(),
-        m_frontRight.getState(),
-        m_backLeft.getState(),
-        m_backRight.getState());
+        Mod0.getState(),
+        Mod1.getState(),
+        Mod2.getState(),
+        Mod3.getState());
   }
 
 }
