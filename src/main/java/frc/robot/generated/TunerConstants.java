@@ -5,6 +5,11 @@ import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.Pigeon2Configuration;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.DutyCycleOut;
+import com.ctre.phoenix6.controls.PositionVoltage;
+import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.hardware.CANcoder;
+import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModuleConstantsFactory;
@@ -14,11 +19,15 @@ import com.ctre.phoenix6.signals.SensorDirectionValue;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.ClosedLoopOutputType;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModuleConstants.SteerFeedbackType;
 
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import frc.robot.COTSTalonFXSwerveConstants;
+import frc.robot.Conversions;
 import frc.robot.SwerveModConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 
@@ -230,6 +239,59 @@ public class TunerConstants {
             public static final Rotation2d angleOffset = Rotation2d.fromRadians(kFrontLeftEncoderOffset);
             public static final SwerveModConstants constants = 
                 new SwerveModConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
+
+            private static TalonFX mAngleMotor;
+            private static TalonFX mDriveMotor;
+            private static CANcoder angleEncoder;
+            private final static PositionVoltage anglePosition = new PositionVoltage(0);
+            private final static DutyCycleOut driveDutyCycle = new DutyCycleOut(0);
+            private final static VelocityVoltage driveVelocity = new VelocityVoltage(0);
+            private final static SimpleMotorFeedforward driveFeedForward = new SimpleMotorFeedforward(TunerConstants.driveGains.kS, TunerConstants.driveGains.kV, TunerConstants.driveGains.kA);
+
+            public static SwerveModuleState getState(){
+                return new SwerveModuleState(
+                    Conversions.RPSToMPS(mDriveMotor.getVelocity().getValue(), TunerConstants.Swerve.wheelCircumference), 
+                    Rotation2d.fromRotations(angleEncoder.getPosition().getValue())
+                );
+            }
+
+            public static SwerveModulePosition getPosition(){
+                return new SwerveModulePosition(
+                    Conversions.rotationsToMeters(mDriveMotor.getPosition().getValue(), TunerConstants.Swerve.wheelCircumference), 
+                    Rotation2d.fromRotations(angleEncoder.getPosition().getValue())
+                );
+            }
+
+            public static void setDesiredState(SwerveModuleState desiredState, boolean isOpenLoop){
+                desiredState = SwerveModuleState.optimize(desiredState, getState().angle); 
+                mAngleMotor.setControl(anglePosition.withPosition(desiredState.angle.getRotations()));
+                setSpeed(desiredState, isOpenLoop);
+            }
+          
+            private static void setSpeed(SwerveModuleState desiredState, boolean isOpenLoop){
+                if(isOpenLoop){
+                    driveDutyCycle.Output = desiredState.speedMetersPerSecond / TunerConstants.Swerve.maxSpeed;
+                    mDriveMotor.setControl(driveDutyCycle);
+                }
+                else {
+                    driveVelocity.Velocity = Conversions.MPSToRPS(desiredState.speedMetersPerSecond, TunerConstants.Swerve.wheelCircumference);
+                    driveVelocity.FeedForward = driveFeedForward.calculate(desiredState.speedMetersPerSecond);
+                    mDriveMotor.setControl(driveVelocity);
+                }
+            }
+
+            public Rotation2d getCANcoder(){
+                return Rotation2d.fromRotations(angleEncoder.getAbsolutePosition().getValue());
+            }
+          
+            public void resetToAbsolute(){
+                double absolutePosition = getCANcoder().getRotations() - angleOffset.getRotations();
+                mAngleMotor.setPosition(absolutePosition);
+            }
+
+            public static void resetEncoders() {
+                mDriveMotor.setPosition(0);
+              }
         }
 
         /* Front Right Module - Module 1 */
@@ -240,6 +302,59 @@ public class TunerConstants {
             public static final Rotation2d angleOffset = Rotation2d.fromRadians(kFrontRightEncoderOffset);
             public static final SwerveModConstants constants = 
                 new SwerveModConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
+
+            private static TalonFX mAngleMotor;
+            private static TalonFX mDriveMotor;
+            private static CANcoder angleEncoder;
+            private final static PositionVoltage anglePosition = new PositionVoltage(0);
+            private final static DutyCycleOut driveDutyCycle = new DutyCycleOut(0);
+            private final static VelocityVoltage driveVelocity = new VelocityVoltage(0);
+            private final static SimpleMotorFeedforward driveFeedForward = new SimpleMotorFeedforward(TunerConstants.driveGains.kS, TunerConstants.driveGains.kV, TunerConstants.driveGains.kA);
+
+            public static SwerveModuleState getState(){
+                return new SwerveModuleState(
+                    Conversions.RPSToMPS(mDriveMotor.getVelocity().getValue(), TunerConstants.Swerve.wheelCircumference), 
+                    Rotation2d.fromRotations(angleEncoder.getPosition().getValue())
+                );
+            }
+
+            public static SwerveModulePosition getPosition(){
+                return new SwerveModulePosition(
+                    Conversions.rotationsToMeters(mDriveMotor.getPosition().getValue(), TunerConstants.Swerve.wheelCircumference), 
+                    Rotation2d.fromRotations(angleEncoder.getPosition().getValue())
+                );
+            }
+
+            public static void setDesiredState(SwerveModuleState desiredState, boolean isOpenLoop){
+                desiredState = SwerveModuleState.optimize(desiredState, getState().angle); 
+                mAngleMotor.setControl(anglePosition.withPosition(desiredState.angle.getRotations()));
+                setSpeed(desiredState, isOpenLoop);
+            }
+          
+            private static void setSpeed(SwerveModuleState desiredState, boolean isOpenLoop){
+                if(isOpenLoop){
+                    driveDutyCycle.Output = desiredState.speedMetersPerSecond / TunerConstants.Swerve.maxSpeed;
+                    mDriveMotor.setControl(driveDutyCycle);
+                }
+                else {
+                    driveVelocity.Velocity = Conversions.MPSToRPS(desiredState.speedMetersPerSecond, TunerConstants.Swerve.wheelCircumference);
+                    driveVelocity.FeedForward = driveFeedForward.calculate(desiredState.speedMetersPerSecond);
+                    mDriveMotor.setControl(driveVelocity);
+                }
+            }
+
+            public Rotation2d getCANcoder(){
+                return Rotation2d.fromRotations(angleEncoder.getAbsolutePosition().getValue());
+            }
+          
+            public void resetToAbsolute(){
+                double absolutePosition = getCANcoder().getRotations() - angleOffset.getRotations();
+                mAngleMotor.setPosition(absolutePosition);
+            }
+
+            public static void resetEncoders() {
+                mDriveMotor.setPosition(0);
+              }
         }
         
         /* Back Left Module - Module 2 */
@@ -250,6 +365,59 @@ public class TunerConstants {
             public static final Rotation2d angleOffset = Rotation2d.fromRadians(kBackLeftEncoderOffset);
             public static final SwerveModConstants constants = 
                 new SwerveModConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
+            
+            private static TalonFX mAngleMotor;
+            private static TalonFX mDriveMotor;
+            private static CANcoder angleEncoder;
+            private final static PositionVoltage anglePosition = new PositionVoltage(0);
+            private final static DutyCycleOut driveDutyCycle = new DutyCycleOut(0);
+            private final static VelocityVoltage driveVelocity = new VelocityVoltage(0);
+            private final static SimpleMotorFeedforward driveFeedForward = new SimpleMotorFeedforward(TunerConstants.driveGains.kS, TunerConstants.driveGains.kV, TunerConstants.driveGains.kA);
+
+            public static SwerveModuleState getState(){
+                return new SwerveModuleState(
+                    Conversions.RPSToMPS(mDriveMotor.getVelocity().getValue(), TunerConstants.Swerve.wheelCircumference), 
+                    Rotation2d.fromRotations(angleEncoder.getPosition().getValue())
+                );
+            }
+
+            public static SwerveModulePosition getPosition(){
+                return new SwerveModulePosition(
+                    Conversions.rotationsToMeters(mDriveMotor.getPosition().getValue(), TunerConstants.Swerve.wheelCircumference), 
+                    Rotation2d.fromRotations(angleEncoder.getPosition().getValue())
+                );
+            }
+
+            public static void setDesiredState(SwerveModuleState desiredState, boolean isOpenLoop){
+                desiredState = SwerveModuleState.optimize(desiredState, getState().angle); 
+                mAngleMotor.setControl(anglePosition.withPosition(desiredState.angle.getRotations()));
+                setSpeed(desiredState, isOpenLoop);
+            }
+          
+            private static void setSpeed(SwerveModuleState desiredState, boolean isOpenLoop){
+                if(isOpenLoop){
+                    driveDutyCycle.Output = desiredState.speedMetersPerSecond / TunerConstants.Swerve.maxSpeed;
+                    mDriveMotor.setControl(driveDutyCycle);
+                }
+                else {
+                    driveVelocity.Velocity = Conversions.MPSToRPS(desiredState.speedMetersPerSecond, TunerConstants.Swerve.wheelCircumference);
+                    driveVelocity.FeedForward = driveFeedForward.calculate(desiredState.speedMetersPerSecond);
+                    mDriveMotor.setControl(driveVelocity);
+                }
+            }
+
+            public Rotation2d getCANcoder(){
+                return Rotation2d.fromRotations(angleEncoder.getAbsolutePosition().getValue());
+            }
+          
+            public void resetToAbsolute(){
+                double absolutePosition = getCANcoder().getRotations() - angleOffset.getRotations();
+                mAngleMotor.setPosition(absolutePosition);
+            }
+
+            public static void resetEncoders() {
+                mDriveMotor.setPosition(0);
+              }
         }
 
         /* Back Right Module - Module 3 */
@@ -260,6 +428,59 @@ public class TunerConstants {
             public static final Rotation2d angleOffset = Rotation2d.fromRadians(kBackRightEncoderOffset);
             public static final SwerveModConstants constants = 
                 new SwerveModConstants(driveMotorID, angleMotorID, canCoderID, angleOffset);
+
+            private static TalonFX mAngleMotor;
+            private static TalonFX mDriveMotor;
+            private static CANcoder angleEncoder;
+            private final static PositionVoltage anglePosition = new PositionVoltage(0);
+            private final static DutyCycleOut driveDutyCycle = new DutyCycleOut(0);
+            private final static VelocityVoltage driveVelocity = new VelocityVoltage(0);
+            private final static SimpleMotorFeedforward driveFeedForward = new SimpleMotorFeedforward(TunerConstants.driveGains.kS, TunerConstants.driveGains.kV, TunerConstants.driveGains.kA);
+
+            public static SwerveModuleState getState(){
+                return new SwerveModuleState(
+                    Conversions.RPSToMPS(mDriveMotor.getVelocity().getValue(), TunerConstants.Swerve.wheelCircumference), 
+                    Rotation2d.fromRotations(angleEncoder.getPosition().getValue())
+                );
+            }
+
+            public static SwerveModulePosition getPosition(){
+                return new SwerveModulePosition(
+                    Conversions.rotationsToMeters(mDriveMotor.getPosition().getValue(), TunerConstants.Swerve.wheelCircumference), 
+                    Rotation2d.fromRotations(angleEncoder.getPosition().getValue())
+                );
+            }
+
+            public static void setDesiredState(SwerveModuleState desiredState, boolean isOpenLoop){
+                desiredState = SwerveModuleState.optimize(desiredState, getState().angle); 
+                mAngleMotor.setControl(anglePosition.withPosition(desiredState.angle.getRotations()));
+                setSpeed(desiredState, isOpenLoop);
+            }
+          
+            private static void setSpeed(SwerveModuleState desiredState, boolean isOpenLoop){
+                if(isOpenLoop){
+                    driveDutyCycle.Output = desiredState.speedMetersPerSecond / TunerConstants.Swerve.maxSpeed;
+                    mDriveMotor.setControl(driveDutyCycle);
+                }
+                else {
+                    driveVelocity.Velocity = Conversions.MPSToRPS(desiredState.speedMetersPerSecond, TunerConstants.Swerve.wheelCircumference);
+                    driveVelocity.FeedForward = driveFeedForward.calculate(desiredState.speedMetersPerSecond);
+                    mDriveMotor.setControl(driveVelocity);
+                }
+            }
+
+            public Rotation2d getCANcoder(){
+                return Rotation2d.fromRotations(angleEncoder.getAbsolutePosition().getValue());
+            }
+          
+            public void resetToAbsolute(){
+                double absolutePosition = getCANcoder().getRotations() - angleOffset.getRotations();
+                mAngleMotor.setPosition(absolutePosition);
+            }
+
+            public static void resetEncoders() {
+                mDriveMotor.setPosition(0);
+              }
         }
     }
 

@@ -14,6 +14,7 @@ import com.pathplanner.lib.util.PIDConstants;
 import com.pathplanner.lib.util.ReplanningConfig;
 import com.ctre.phoenix6.configs.Pigeon2Configuration;
 import com.ctre.phoenix6.hardware.Pigeon2;
+import com.ctre.phoenix6.hardware.TalonFX;
 
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -48,6 +49,8 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
     private Notifier m_simNotifier = null;
     private double m_lastSimTime;
     public SwerveDriveOdometry odometry;
+
+    private static TalonFX mDriveMotor;
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
     private final Rotation2d BlueAlliancePerspectiveRotation = Rotation2d.fromDegrees(0);
@@ -118,6 +121,7 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
 
   }
 
+//getPose method
 public Pose2d getPose() {
     return m_odometry.getEstimatedPosition();
   }
@@ -126,16 +130,14 @@ public Pose2d getPose2d() {
     return m_odometry.getEstimatedPosition();
   }
 
-
-// public void resetPose(Pose2d pose) {
-//     odometry.resetPosition( BlueAlliancePerspectiveRotation, m_modulePositions, pose);
-// }
+ //resetPose method 
+private final Pigeon2 m_gyro = new Pigeon2(10);
 
 public void resetEncoders() {
-    m_drivingEncoder.setPosition(0);
+    mDriveMotor.setPosition(0);
   }
 
-public void resetEncoders() {
+public void resetModEncoders() {
     Mod0.resetEncoders();
     Mod1.resetEncoders();
     Mod2.resetEncoders();
@@ -144,7 +146,7 @@ public void resetEncoders() {
 
 public void resetOdometry(Pose2d pose) {
 
-    resetEncoders();
+    resetModEncoders();
 
     m_odometry.resetPosition(
       m_gyro.getRotation2d(),
@@ -157,29 +159,28 @@ public void resetOdometry(Pose2d pose) {
         pose);
   }
 
-
-
- public void driveRobotRelative(ChassisSpeeds chassisSpeeds) {
-    var swerveModuleStates = 
-        TunerConstants.kDriveKinematics.toSwerveModuleStates(chassisSpeeds);
-  
-    SwerveDriveKinematics.desaturateWheelSpeeds(
-        (SwerveModuleState[]) swerveModuleStates, TunerConstants.kSpeedAt12VoltsMps);
-  
-    Mod0.setDesiredState(swerveModuleStates[0]);
-    Mod1.setDesiredState(swerveModuleStates[1]);
-    Mod2.setDesiredState(swerveModuleStates[2]);
-    Mod3.setDesiredState(swerveModuleStates[3]);
-  }
-  
+  //getRobotRelativeSpeeds method
   public ChassisSpeeds getRobotRelativeSpeeds() {
-    return TunerConstants.kDriveKinematics.toChassisSpeeds(
+    return TunerConstants.Swerve.swerveKinematics.toChassisSpeeds(
         Mod0.getState(),
         Mod1.getState(),
         Mod2.getState(),
         Mod3.getState());
   }
 
+  // driveRobotRelative method
+ public void driveRobotRelative(ChassisSpeeds chassisSpeeds) {
+    var swerveModuleStates = 
+        TunerConstants.Swerve.swerveKinematics.toSwerveModuleStates(chassisSpeeds);
+  
+    SwerveDriveKinematics.desaturateWheelSpeeds(
+        (SwerveModuleState[]) swerveModuleStates, TunerConstants.kSpeedAt12VoltsMps);
+  
+    Mod0.setDesiredState(swerveModuleStates[0], hasAppliedOperatorPerspective);
+    Mod1.setDesiredState(swerveModuleStates[1], hasAppliedOperatorPerspective);
+    Mod2.setDesiredState(swerveModuleStates[2], hasAppliedOperatorPerspective);
+    Mod3.setDesiredState(swerveModuleStates[3], hasAppliedOperatorPerspective);
+  }
 }
     
     @Override
@@ -198,37 +199,4 @@ public void resetOdometry(Pose2d pose) {
             });
         }
     }
-    // public static double getKsimloopperiod() {
-    //     return kSimLoopPeriod;
-    // }
-    // public Notifier getM_simNotifier() {
-    //     return m_simNotifier;
-    // }
-    // public void setM_simNotifier(Notifier m_simNotifier) {
-    //     this.m_simNotifier = m_simNotifier;
-    // }
-    // public double getM_lastSimTime() {
-    //     return m_lastSimTime;
-    // }
-    // public void setM_lastSimTime(double m_lastSimTime) {
-    //     this.m_lastSimTime = m_lastSimTime;
-    // }
-    // public SwerveDriveOdometry getOdometry() {
-    //     return odometry;
-    // }
-    // public void setOdometry(SwerveDriveOdometry odometry) {
-    //     this.odometry = odometry;
-    // }
-    // public Rotation2d getBlueAlliancePerspectiveRotation() {
-    //     return BlueAlliancePerspectiveRotation;
-    // }
-    // public Rotation2d getRedAlliancePerspectiveRotation() {
-    //     return RedAlliancePerspectiveRotation;
-    // }
-    // public boolean isHasAppliedOperatorPerspective() {
-    //     return hasAppliedOperatorPerspective;
-    // }
-    // public void setHasAppliedOperatorPerspective(boolean hasAppliedOperatorPerspective) {
-    //     this.hasAppliedOperatorPerspective = hasAppliedOperatorPerspective;
-    // }
 }
